@@ -1,0 +1,4 @@
+#!/bin/bash
+
+g++ -o lb.exe main.cpp
+./lb.exe
