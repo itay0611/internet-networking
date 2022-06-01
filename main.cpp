@@ -13,6 +13,7 @@
 #include <time.h>
 #include <thread>
 #include <mutex>
+#include <unistd.h>
 
 #define SERV1 "192.168.0.101"
 #define SERV2 "192.168.0.102"
@@ -122,11 +123,11 @@ void message_handler(int sockfd, vector<time_t>& servers_empty_times, vector<int
         servers_empty_times[index] += video_server_execution_time;
     }
     cout << " " << curr_time << ": recieved request " << message_type << message_time;
-    cout << " from " << inet_ntoa(addr.sin_addr) << ", sending to " << servers_ip[i] << "-----" << endl;
+    cout << " from " << inet_ntoa(addr.sin_addr) << ", sending to " << servers_ip[index] << "-----" << endl;
     // TODO: unlock
     mtx.unlock();
 
-    cout << " " << curr_time <<
+    cout << " " << curr_time << endl;
     // TODO: send the message to the best server using server_fds[index]
     if (send(servers_fds[index], buf, sizeof(buf), 0) < 0) {
         error("Can't send the message to the server");
@@ -192,17 +193,20 @@ int main() {
     serv2_addr.sin_port = htons(PORT);
     serv3_addr.sin_port = htons(PORT);
 
-    inet_aton(SERV1, &serv1_addr.sin_addr.s_addr);
-    inet_aton(SERV2, &serv2_addr.sin_addr.s_addr);
-    inet_aton(SERV3, &serv3_addr.sin_addr.s_addr);
+    //inet_aton(SERV1, &serv1_addr.sin_addr.s_addr);
+    //inet_aton(SERV2, &serv2_addr.sin_addr.s_addr);
+    //inet_aton(SERV3, &serv3_addr.sin_addr.s_addr);
+	inet_aton(SERV1, &serv1_addr.sin_addr);
+    inet_aton(SERV2, &serv2_addr.sin_addr);
+    inet_aton(SERV3, &serv3_addr.sin_addr);
 
-    if(connect(serv1_sock, serv1_addr, sizeof(serv1_addr)) < 0) {
+    if(connect(serv1_sock, (struct sockaddr*) &serv1_addr, sizeof(serv1_addr)) < 0) {
         error("ERROR connecting");
     }
-    if(connect(serv2_sock, serv2_addr, sizeof(serv2_addr)) < 0) {
+    if(connect(serv2_sock, (struct sockaddr*) &serv2_addr, sizeof(serv2_addr)) < 0) {
         error("ERROR connecting");
     }
-    if(connect(serv3_sock, serv3_addr, sizeof(serv3_addr)) < 0) {
+    if(connect(serv3_sock, (struct sockaddr*) &serv3_addr, sizeof(serv3_addr)) < 0) {
         error("ERROR connecting");
     }
 
@@ -224,7 +228,7 @@ int main() {
     listen_addr.sin_addr.s_addr = INADDR_ANY;
     listen_addr.sin_port = htons(PORT);
 
-    if(bind(listen_sock_fd, listen_addr, sizeof(listen_addr)) < 0) {
+    if(bind(listen_sock_fd, (struct sockaddr*) &listen_addr, sizeof(listen_addr)) < 0) {
         error("ERROR on binding");
     }
 
@@ -238,7 +242,7 @@ int main() {
         cout << "lb1#";
         client_len = sizeof(client_addr);
 
-        newsockfd = accept(listen_sock_fd, client_addr, client_len);
+        newsockfd = accept(listen_sock_fd, (struct sockaddr*) &client_addr, (socklen_t*) &client_len);
         if(newsockfd < 0) {
             error("ERROR on accept");
         }
