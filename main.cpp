@@ -33,6 +33,7 @@ using std::cin;
 using std::vector;
 using std::localtime;
 using std::time_t;
+using std::mutex;
 
 bool availableThreads[5] = {true, true, true, true, true};
 std::mutex mtx;
@@ -99,7 +100,7 @@ void* message_handler(void* abs_params) {
         error("Could not receive message");
     }
     message_type = buf[0];
-    message_time = buf[1];
+    message_time = (int)(buf[1] - '0'); //To convert from ascii to int 
 
     // AFTER THE PARSING OF THE MESSAGE
 
