@@ -95,18 +95,23 @@ def main():
     curr_time = datetime.now().strftime("%H:%M:%S")
     servers_empty_time += [curr_time] * 3
 
+    print(": LB started-----lb1#")
+    print(": Connecting to servers-----lb1#")
+
     # creating the listening socket
 
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listening_sock:
-        listening_sock.bind(("", PORT))
-        listening_sock.listen()  # TODO: maybe need to add more size here
-        threads = list()
-        while True:
-            client_sock, address = listening_sock.accept()
-            thr = threading.Thread(target=handle_client, args=(client_sock, address, servers_list, servers_ips, servers_empty_time))
-            threads.append(thr)
-            thr.start()
-            # TODO: add join?
+    listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listening_sock.bind(("", PORT))
+    listening_sock.listen()  # TODO: maybe need to add more size here
+    threads = list()
+    while True:
+        client_sock, address = listening_sock.accept()
+        thr = threading.Thread(target=handle_client, args=(client_sock, address, servers_list, servers_ips, servers_empty_time))
+        threads.append(thr)
+        thr.start()
+        # TODO: add join?
+
+    listening_sock.close()
 
 
 
