@@ -47,7 +47,7 @@ def handle_client(client_sock, client_address, servers_list, servers_ips, server
         music_server_execution_time = 2 * message_time
 
     with lock:
-        curr_time = datetime.now().strftime("%H:%M:%S")
+        curr_time = datetime.now()
         # TODO: check if max works
         servers_empty_time[0] = max(servers_empty_time[0], curr_time)
         servers_empty_time[1] = max(servers_empty_time[1], curr_time)
@@ -63,7 +63,7 @@ def handle_client(client_sock, client_address, servers_list, servers_ips, server
     else:
         servers_empty_time[server_index] = servers_empty_time[server_index] + video_time_change
 
-    print(" " + curr_time + ": received request " + client_data)
+    print(" " + curr_time.strftime("%H:%M:%S") + ": received request " + client_data)
     print("from " + client_address[0] + ", sending to " + servers_ips[server_index] + "-----")
 
     # sending the message to the selected server
@@ -95,7 +95,8 @@ def main():
 
     servers_list = [serv1_socket, serv2_socket, serv3_socket]
     servers_empty_time = []
-    curr_time = datetime.now().strftime("%H:%M:%S")
+    # curr_time = datetime.now().strftime("%H:%M:%S")
+    curr_time = datetime.now()
     servers_empty_time += [curr_time] * 3
 
 
