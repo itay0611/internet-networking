@@ -336,6 +336,15 @@ int main() {
         //std::thread th(message_handler, newsockfd, servers_empty_times, servers_fds, t_index);
         //myThreads.push_back(th);
 
+
+
+
+
+
+
+
+
+        /*
         ThreadFuncVars params(newsockfd, servers_empty_times, servers_fds, 0);
 
         //pthread_create(&myThreads[t_index], NULL, message_handler, &params);
@@ -349,6 +358,7 @@ int main() {
 
             i = 0;
         }
+        */
 
 
 
@@ -356,6 +366,120 @@ int main() {
         // TODO: maybe add join
 
         //i++;
+
+        ThreadFuncVars params(newsockfd, servers_empty_times, servers_fds, 0);
+        int message_time, video_server_execution_time, music_server_execution_time;
+        char message_type;
+        time_t curr_time;
+        char buf[2];
+        char answer[64];
+
+        struct sockaddr_in addr;
+        socklen_t addr_size = sizeof(struct sockaddr_in);
+        int res = getpeername(params.sockfd, (struct sockaddr *)&addr, &addr_size);
+        // TODO: add recv from client, find out which server to send to, send to server, recv answer from server, send to client
+
+        // TODO: add the recv
+        
+        if (recv(params.sockfd, buf, sizeof(buf), 0) < 0) {
+            error("Could not receive message");
+        }
+        
+        message_type = buf[0];
+        message_time = (int)(buf[1] - '0'); //To convert from ascii to int 
+
+        // AFTER THE PARSING OF THE MESSAGE
+
+        switch(message_type) {
+            case VIDEO:
+                video_server_execution_time = message_time;
+                music_server_execution_time = 3 * message_time;
+                break;
+            case MUSIC:
+                music_server_execution_time = message_time;
+                video_server_execution_time = 2 * message_time;
+                break;
+            case PICTURE:
+                video_server_execution_time = message_time;
+                music_server_execution_time = 2 * message_time;
+                break;
+            default:
+                // should not get here
+                error("UNDEFINED MESSAGE");
+                break;
+        }
+        // TODO: lock
+        //mtx.lock();
+        
+        time(&curr_time);
+        params.servers_empty_times[0] = std::max(params.servers_empty_times[0],curr_time);
+        params.servers_empty_times[1] = std::max(params.servers_empty_times[1],curr_time);
+        params.servers_empty_times[2] = std::max(params.servers_empty_times[2],curr_time);
+
+        int index = findBestServer(params.servers_empty_times[0] + video_server_execution_time, params.servers_empty_times[1] + video_server_execution_time, params.servers_empty_times[2] + music_server_execution_time);
+        if(index == 2) {
+            params.servers_empty_times[index] += music_server_execution_time;
+        } else {
+            params.servers_empty_times[index] += video_server_execution_time;
+        }
+        cout << " " << curr_time << ": recieved request " << message_type << message_time;
+        cout << " from " << inet_ntoa(addr.sin_addr) << ", sending to " << servers_ip[index] << "-----" << endl;
+        // TODO: unlock
+        //mtx.unlock();
+        
+
+        cout << "A" << endl;
+
+        
+        cout << " " << curr_time << endl;
+        // TODO: send the message to the best server using server_fds[index]
+        if (send(params.servers_fds[index], buf, sizeof(buf), 0) < 0) {
+            error("Can't send the message to the server");
+        }
+        
+
+        cout << "B" << endl;
+
+        
+        // TODO: recv the answer from the server
+        if (recv(params.servers_fds[index], answer, sizeof(answer), 0) < 0) {
+            error("Can't receive the message from the server");
+        }
+
+        cout << "GOT ANSWER FROM SERVER:" << endl;
+        cout << answer << endl;
+        
+
+
+        
+        // TODO: send the answer to the client
+        if (send(params.sockfd, answer, sizeof(answer), 0) < 0) {
+            error("Can't send the message to the client");
+        }
+        
+
+        cout << "C" << endl;
+
+        /*
+        // lock
+        mtx.lock();
+        availableThreads[params->thread_idx] = true;
+        // unlock
+        mtx.unlock();
+        */
+        
+        close(params.sockfd);
+
+        cout << "D" << endl;
+
+        cout << "ENDED THE THREAD CODE" << endl;
+
+        //mtx.unlock();
+        
+        
+
+        
+        
         
     }
 
