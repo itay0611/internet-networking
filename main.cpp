@@ -14,6 +14,7 @@
 #include <thread>
 #include <mutex>
 #include <unistd.h>
+#include <pthread.h>
 
 #define SERV1 "192.168.0.101"
 #define SERV2 "192.168.0.102"
@@ -36,6 +37,16 @@ using std::time_t;
 bool availableThreads[5] = {true, true, true, true, true};
 std::mutex mtx;
 const std::string servers_ip[3] = {"192.168.0.101", "192.168.0.102", "192.168.0.103"};
+
+class ThreadFuncVars {
+public:
+    int sockfd;
+    vector<time_t> servers_empty_times;
+    vector<int> servers_fds;
+    int thread_idx;
+
+    ThreadFuncVars(int sockfd, vector<time_t>& servers_empty_times, vector<int>& servers_fds, int thread_idx) : sockfd(sockfd), servers_empty_times(servers_empty_times), servers_fds(servers_fds), thread_idx(thread_idx) {}
+};
 
 int getAvailableThread() {
     for (int i = 0; i < 5; i++) {
@@ -70,7 +81,8 @@ int findBestServer(double server1_expect_time, double server2_expect_time, doubl
     }
 }
 
-void message_handler(int sockfd, vector<time_t>& servers_empty_times, vector<int>& servers_fds, int thread_idx) {
+void* message_handler(void* abs_params) {
+    ThreadFuncVars* params = (ThreadFuncVars*) abs_params;
     int message_time, video_server_execution_time, music_server_execution_time;
     char message_type;
     time_t curr_time;
@@ -79,11 +91,11 @@ void message_handler(int sockfd, vector<time_t>& servers_empty_times, vector<int
 
     struct sockaddr_in addr;
     socklen_t addr_size = sizeof(struct sockaddr_in);
-    int res = getpeername(sockfd, (struct sockaddr *)&addr, &addr_size);
+    int res = getpeername(params->sockfd, (struct sockaddr *)&addr, &addr_size);
     // TODO: add recv from client, find out which server to send to, send to server, recv answer from server, send to client
 
     // TODO: add the recv
-    if (recv(sockfd, buf, sizeof(buf), 0) < 0) {
+    if (recv(params->sockfd, buf, sizeof(buf), 0) < 0) {
         error("Could not receive message");
     }
     message_type = buf[0];
@@ -112,15 +124,15 @@ void message_handler(int sockfd, vector<time_t>& servers_empty_times, vector<int
     // TODO: lock
     mtx.lock();
     time(&curr_time);
-    servers_empty_times[0] = std::max(servers_empty_times[0],curr_time);
-    servers_empty_times[1] = std::max(servers_empty_times[1],curr_time);
-    servers_empty_times[2] = std::max(servers_empty_times[2],curr_time);
+    params->servers_empty_times[0] = std::max(params->servers_empty_times[0],curr_time);
+    params->servers_empty_times[1] = std::max(params->servers_empty_times[1],curr_time);
+    params->servers_empty_times[2] = std::max(params->servers_empty_times[2],curr_time);
 
-    int index = findBestServer(servers_empty_times[0] + video_server_execution_time, servers_empty_times[1] + video_server_execution_time, servers_empty_times[2] + music_server_execution_time);
+    int index = findBestServer(params->servers_empty_times[0] + video_server_execution_time, params->servers_empty_times[1] + video_server_execution_time, params->servers_empty_times[2] + music_server_execution_time);
     if(index == 2) {
-        servers_empty_times[index] += music_server_execution_time;
+        params->servers_empty_times[index] += music_server_execution_time;
     } else {
-        servers_empty_times[index] += video_server_execution_time;
+        params->servers_empty_times[index] += video_server_execution_time;
     }
     cout << " " << curr_time << ": recieved request " << message_type << message_time;
     cout << " from " << inet_ntoa(addr.sin_addr) << ", sending to " << servers_ip[index] << "-----" << endl;
@@ -129,26 +141,28 @@ void message_handler(int sockfd, vector<time_t>& servers_empty_times, vector<int
 
     cout << " " << curr_time << endl;
     // TODO: send the message to the best server using server_fds[index]
-    if (send(servers_fds[index], buf, sizeof(buf), 0) < 0) {
+    if (send(params->servers_fds[index], buf, sizeof(buf), 0) < 0) {
         error("Can't send the message to the server");
     }
 
     // TODO: recv the answer from the server
-    if (recv(servers_fds[index], answer, sizeof(answer), 0) < 0) {
+    if (recv(params->servers_fds[index], answer, sizeof(answer), 0) < 0) {
         error("Can't receive the message from the server");
     }
 
     // TODO: send the answer to the client
-    if (send(sockfd, answer, sizeof(answer), 0) < 0) {
+    if (send(params->sockfd, answer, sizeof(answer), 0) < 0) {
         error("Can't send the message to the client");
     }
 
     // lock
     mtx.lock();
-    availableThreads[thread_idx] = true;
+    availableThreads[params->thread_idx] = true;
     // unlock
     mtx.unlock();
-    close(sockfd);
+    close(params->sockfd);
+
+    return 0;
 }
 
 
@@ -234,7 +248,15 @@ int main() {
 
     listen(listen_sock_fd, 5);
 
-    std::thread myThreads[5];
+    //std::thread myThreads[5];
+    //std::vector<std::thread> myThreads;
+
+    std::vector<pthread_t> myThreads;
+
+    for (int i = 0; i < 5; i++) {
+        pthread_t curr_thread;
+        myThreads.push_back(curr_thread);
+    }
 
     //int i = 0;
 
@@ -255,8 +277,22 @@ int main() {
         }
         availableThreads[t_index] = false;
         // TODO: unlock
+        ThreadFuncVars params(newsockfd, servers_empty_times, servers_fds, t_index);
+        /*
+        params.sockfd = newsockfd;
+        params.servers_empty_times = servers_empty_times;
+        params.servers_fds = servers_fds;
+        params.thread_idx = t_index;
+        */
         mtx.unlock();
-        myThreads[t_index] = std::thread(message_handler, newsockfd, servers_empty_times, servers_fds, t_index);
+        //std::thread th(message_handler, params);
+        //myThreads.push_back(th);
+        //std::thread th(message_handler, newsockfd, servers_empty_times, servers_fds, t_index);
+        //myThreads.push_back(th);
+
+
+        pthread_create(&myThreads[t_index], NULL, message_handler, &params);
+
 
 
 
@@ -265,7 +301,7 @@ int main() {
         //i++;
     }
 
-    for(int i = 0; i < 0; i++) {
+    for(int i = 0; i < servers_fds.size(); i++) {
         close(servers_fds[i]);
     }
 
