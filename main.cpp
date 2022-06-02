@@ -165,6 +165,8 @@ void* message_handler(void* abs_params) {
     */
     close(params->sockfd);
 
+    cout << "ENDED THE THREAD CODE" << endl;
+
     return 0;
 }
 
@@ -249,7 +251,8 @@ int main() {
         error("ERROR on binding");
     }
 
-    listen(listen_sock_fd, 5);
+    //listen(listen_sock_fd, 5);
+    listen(listen_sock_fd, 32767);
 
     //std::thread myThreads[5];
     //std::vector<std::thread> myThreads;
@@ -312,7 +315,7 @@ int main() {
         // TODO: maybe add join
 
         //i++;
-        cout << "ENDED THE LOOP" << endl;
+        
     }
 
     for(int i = 0; i < servers_fds.size(); i++) {
