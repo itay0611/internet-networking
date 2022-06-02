@@ -138,7 +138,7 @@ void* message_handler(void* abs_params) {
     cout << " " << curr_time << ": recieved request " << message_type << message_time;
     cout << " from " << inet_ntoa(addr.sin_addr) << ", sending to " << servers_ip[index] << "-----" << endl;
     // TODO: unlock
-    mtx.unlock();
+    //mtx.unlock();
 
     cout << "A" << endl;
 
@@ -176,6 +176,8 @@ void* message_handler(void* abs_params) {
     cout << "D" << endl;
 
     cout << "ENDED THE THREAD CODE" << endl;
+
+    mtx.unlock();
 
     return 0;
 }
