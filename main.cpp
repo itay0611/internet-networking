@@ -15,6 +15,7 @@
 #include <mutex>
 #include <unistd.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 #define SERV1 "192.168.0.101"
 #define SERV2 "192.168.0.102"
@@ -38,6 +39,8 @@ using std::mutex;
 bool availableThreads[5] = {true, true, true, true, true};
 std::mutex mtx;
 const std::string servers_ip[3] = {"192.168.0.101", "192.168.0.102", "192.168.0.103"};
+sem_t threads_sem;
+int count = 0;
 
 class ThreadFuncVars {
 public:
@@ -83,12 +86,16 @@ int findBestServer(double server1_expect_time, double server2_expect_time, doubl
 }
 
 void* message_handler(void* abs_params) {
+    sem_wait(&threads_sem);
+    count++;
+    sem_post(&threads_sem);
+
     ThreadFuncVars* params = (ThreadFuncVars*) abs_params;
     int message_time, video_server_execution_time, music_server_execution_time;
     char message_type;
     time_t curr_time;
     char buf[2];
-    char answer[2];
+    char answer[64];
 
     struct sockaddr_in addr;
     socklen_t addr_size = sizeof(struct sockaddr_in);
@@ -96,9 +103,11 @@ void* message_handler(void* abs_params) {
     // TODO: add recv from client, find out which server to send to, send to server, recv answer from server, send to client
 
     // TODO: add the recv
+    sem_wait(&threads_sem);
     if (recv(params->sockfd, buf, sizeof(buf), 0) < 0) {
         error("Could not receive message");
     }
+    sem_post(&threads_sem);
     message_type = buf[0];
     message_time = (int)(buf[1] - '0'); //To convert from ascii to int 
 
@@ -123,7 +132,8 @@ void* message_handler(void* abs_params) {
             break;
     }
     // TODO: lock
-    mtx.lock();
+    //mtx.lock();
+    sem_wait(&threads_sem);
     time(&curr_time);
     params->servers_empty_times[0] = std::max(params->servers_empty_times[0],curr_time);
     params->servers_empty_times[1] = std::max(params->servers_empty_times[1],curr_time);
@@ -139,28 +149,37 @@ void* message_handler(void* abs_params) {
     cout << " from " << inet_ntoa(addr.sin_addr) << ", sending to " << servers_ip[index] << "-----" << endl;
     // TODO: unlock
     //mtx.unlock();
+    sem_post(&threads_sem);
 
     cout << "A" << endl;
 
+    sem_wait(&threads_sem);
     cout << " " << curr_time << endl;
     // TODO: send the message to the best server using server_fds[index]
     if (send(params->servers_fds[index], buf, sizeof(buf), 0) < 0) {
         error("Can't send the message to the server");
     }
+    sem_post(&threads_sem);
 
     cout << "B" << endl;
 
+    sem_wait(&threads_sem);
     // TODO: recv the answer from the server
     if (recv(params->servers_fds[index], answer, sizeof(answer), 0) < 0) {
         error("Can't receive the message from the server");
     }
 
-    cout << "GOT ANSWER FROM SERVER:" << answer << endl;
+    cout << "GOT ANSWER FROM SERVER:" << endl;
+    cout << answer << endl;
+    sem_post(&threads_sem);
 
+
+    sem_wait(&threads_sem);
     // TODO: send the answer to the client
     if (send(params->sockfd, answer, sizeof(answer), 0) < 0) {
         error("Can't send the message to the client");
     }
+    sem_post(&threads_sem);
 
     cout << "C" << endl;
 
@@ -171,15 +190,18 @@ void* message_handler(void* abs_params) {
     // unlock
     mtx.unlock();
     */
+    sem_wait(&threads_sem);
     close(params->sockfd);
 
     cout << "D" << endl;
 
     cout << "ENDED THE THREAD CODE" << endl;
 
-    mtx.unlock();
+    //mtx.unlock();
+    count--;
+    sem_post(&threads_sem);
 
-    return 0;
+    pthread_exit(NULL);
 }
 
 
@@ -189,10 +211,14 @@ int main() {
     int music_server_execution_time;
     struct sockaddr_in serv1_addr, serv2_addr, serv3_addr;
 
+
     time_t server1_empty_time;
     time(&server1_empty_time);
     time_t server2_empty_time = server1_empty_time;
     time_t server3_empty_time = server1_empty_time;
+
+    sem_init(&threads_sem, 0, 1);
+
     time_t curr_time;
     time(&curr_time);
     cout << curr_time << ": LB started-----lb1#" << endl;
@@ -287,6 +313,7 @@ int main() {
             error("ERROR on accept");
         }
 
+        /*
         // TODO: lock
         mtx.lock();
         int t_index = getAvailableThread();
@@ -296,18 +323,20 @@ int main() {
         availableThreads[t_index] = false;
         // TODO: unlock
         ThreadFuncVars params(newsockfd, servers_empty_times, servers_fds, t_index);
+        */
         /*
         params.sockfd = newsockfd;
         params.servers_empty_times = servers_empty_times;
         params.servers_fds = servers_fds;
         params.thread_idx = t_index;
         */
-        mtx.unlock();
+        //mtx.unlock();
         //std::thread th(message_handler, params);
         //myThreads.push_back(th);
         //std::thread th(message_handler, newsockfd, servers_empty_times, servers_fds, t_index);
         //myThreads.push_back(th);
 
+        ThreadFuncVars params(newsockfd, servers_empty_times, servers_fds, 0);
 
         //pthread_create(&myThreads[t_index], NULL, message_handler, &params);
         pthread_create(&myThreads[i++], NULL, message_handler, &params);
