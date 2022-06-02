@@ -140,21 +140,29 @@ void* message_handler(void* abs_params) {
     // TODO: unlock
     mtx.unlock();
 
+    cout << "A" << endl;
+
     cout << " " << curr_time << endl;
     // TODO: send the message to the best server using server_fds[index]
     if (send(params->servers_fds[index], buf, sizeof(buf), 0) < 0) {
         error("Can't send the message to the server");
     }
 
+    cout << "B" << endl;
+
     // TODO: recv the answer from the server
     if (recv(params->servers_fds[index], answer, sizeof(answer), 0) < 0) {
         error("Can't receive the message from the server");
     }
 
+    cout << "GOT ANSWER FROM SERVER:" << answer << endl;
+
     // TODO: send the answer to the client
     if (send(params->sockfd, answer, sizeof(answer), 0) < 0) {
         error("Can't send the message to the client");
     }
+
+    cout << "C" << endl;
 
     /*
     // lock
@@ -164,6 +172,8 @@ void* message_handler(void* abs_params) {
     mtx.unlock();
     */
     close(params->sockfd);
+
+    cout << "D" << endl;
 
     cout << "ENDED THE THREAD CODE" << endl;
 
