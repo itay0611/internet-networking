@@ -86,6 +86,9 @@ def main():
     serv2_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serv3_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+    print(": LB started-----lb1#")
+    print(": Connecting to servers-----lb1#")
+
     serv1_socket.connect((SERV1, PORT))
     serv2_socket.connect((SERV2, PORT))
     serv3_socket.connect((SERV3, PORT))
@@ -95,15 +98,13 @@ def main():
     curr_time = datetime.now().strftime("%H:%M:%S")
     servers_empty_time += [curr_time] * 3
 
-    print(": LB started-----lb1#")
-    print(": Connecting to servers-----lb1#")
 
     # creating the listening socket
 
     listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listening_sock.bind(("", PORT))
-    listening_sock.listen()  # TODO: maybe need to add more size here
-    threads = list()
+    listening_sock.listen(5)  # TODO: maybe need to add more size here
+    threads = []
     while True:
         client_sock, address = listening_sock.accept()
         thr = threading.Thread(target=handle_client, args=(client_sock, address, servers_list, servers_ips, servers_empty_time))
