@@ -156,11 +156,13 @@ void* message_handler(void* abs_params) {
         error("Can't send the message to the client");
     }
 
+    /*
     // lock
     mtx.lock();
     availableThreads[params->thread_idx] = true;
     // unlock
     mtx.unlock();
+    */
     close(params->sockfd);
 
     return 0;
@@ -259,7 +261,7 @@ int main() {
         myThreads.push_back(curr_thread);
     }
 
-    //int i = 0;
+    int i = 0;
 
     while(true) {
         cout << "lb1#";
@@ -292,7 +294,17 @@ int main() {
         //myThreads.push_back(th);
 
 
-        pthread_create(&myThreads[t_index], NULL, message_handler, &params);
+        //pthread_create(&myThreads[t_index], NULL, message_handler, &params);
+        pthread_create(&myThreads[i++], NULL, message_handler, &params);
+
+        if (i >= 5) {
+            i = 0;
+            while(i < 5) {
+                pthread_join(myThreads[i++, NULL]);
+            }
+
+            i = 0;
+        }
 
 
 
@@ -300,6 +312,7 @@ int main() {
         // TODO: maybe add join
 
         //i++;
+        cout << "ENDED THE LOOP" << endl;
     }
 
     for(int i = 0; i < servers_fds.size(); i++) {
