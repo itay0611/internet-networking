@@ -300,7 +300,7 @@ int main() {
         if (i >= 5) {
             i = 0;
             while(i < 5) {
-                pthread_join(myThreads[i++, NULL]);
+                pthread_join(myThreads[i++], NULL);
             }
 
             i = 0;
