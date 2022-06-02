@@ -88,7 +88,7 @@ void* message_handler(void* abs_params) {
     char message_type;
     time_t curr_time;
     char buf[2];
-    char answer[4096];
+    char answer[2];
 
     struct sockaddr_in addr;
     socklen_t addr_size = sizeof(struct sockaddr_in);
