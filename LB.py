@@ -58,10 +58,11 @@ def handle_client(client_sock, client_address, servers_list, servers_ips, server
 
 
     server_index = find_best_server(servers_empty_time[0] + video_time_change, servers_empty_time[1] + video_time_change, servers_empty_time[2] + music_time_change)
-    if server_index == 2:
-        servers_empty_time[2] = servers_empty_time[2] + music_time_change
-    else:
-        servers_empty_time[server_index] = servers_empty_time[server_index] + video_time_change
+    with lock:
+        if server_index == 2:
+            servers_empty_time[2] = servers_empty_time[2] + music_time_change
+        else:
+            servers_empty_time[server_index] = servers_empty_time[server_index] + video_time_change
 
     print(" " + curr_time.strftime("%H:%M:%S") + ": received request " + client_data + "from " + client_address[0] + ", sending to " + servers_ips[server_index] + "-----")
     # print("from " + client_address[0] + ", sending to " + servers_ips[server_index] + "-----")
