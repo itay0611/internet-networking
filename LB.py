@@ -14,10 +14,16 @@ PICTURE = 'P'
 lock = threading.Lock()
 
 
-def find_best_server(serv1_expect_time, serv2_expect_time, serv3_expect_time):
+def find_best_server(serv1_expect_time, serv2_expect_time, serv3_expect_time, type):
     times = [serv1_expect_time, serv2_expect_time, serv3_expect_time]
     min_time = min(times)
-    return times.index(min_time)
+    if times.count(min_time) == 1:
+        return times.index(min_time)
+    indices = [index for index, item in enumerate(times) if item == min_time]
+    if type == MUSIC:
+        return max(indices)
+    return min(indices)
+
 
 
 def get_message_type(data):
@@ -57,14 +63,14 @@ def handle_client(client_sock, client_address, servers_list, servers_ips, server
     music_time_change = timedelta(seconds=music_server_execution_time)
 
 
-    server_index = find_best_server(servers_empty_time[0] + video_time_change, servers_empty_time[1] + video_time_change, servers_empty_time[2] + music_time_change)
+    server_index = find_best_server(servers_empty_time[0] + video_time_change, servers_empty_time[1] + video_time_change, servers_empty_time[2] + music_time_change, message_type)
     with lock:
         if server_index == 2:
             servers_empty_time[2] = servers_empty_time[2] + music_time_change
         else:
             servers_empty_time[server_index] = servers_empty_time[server_index] + video_time_change
 
-    print(" " + curr_time.strftime("%H:%M:%S") + ": received request " + client_data + "from " + client_address[0] + ", sending to " + servers_ips[server_index] + "-----")
+    print(" " + curr_time.strftime("%H:%M:%S") + ": received request " + client_data + " from " + client_address[0] + ", sending to " + servers_ips[server_index] + "-----")
     # print("from " + client_address[0] + ", sending to " + servers_ips[server_index] + "-----")
 
     # sending the message to the selected server
