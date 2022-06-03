@@ -15,7 +15,7 @@ lock = threading.Lock()
 
 
 def find_best_server(serv1_expect_time, serv2_expect_time, serv3_expect_time, type):
-    times = [serv1_expect_time, serv2_expect_time, serv3_expect_time]
+    times = [serv1_expect_time.replace(microsecond=0), serv2_expect_time.replace(microsecond=0), serv3_expect_time.replace(microsecond=0)]
     min_time = min(times)
     if times.count(min_time) == 1:
         return times.index(min_time)
