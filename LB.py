@@ -63,14 +63,14 @@ def handle_client(client_sock, client_address, servers_list, servers_ips, server
     else:
         servers_empty_time[server_index] = servers_empty_time[server_index] + video_time_change
 
-    print(" " + curr_time.strftime("%H:%M:%S") + ": received request " + client_data)
-    print("from " + client_address[0] + ", sending to " + servers_ips[server_index] + "-----")
+    print(" " + curr_time.strftime("%H:%M:%S") + ": received request " + client_data + "from " + client_address[0] + ", sending to " + servers_ips[server_index] + "-----")
+    # print("from " + client_address[0] + ", sending to " + servers_ips[server_index] + "-----")
 
     # sending the message to the selected server
     servers_list[server_index].send(client_data.encode())
 
     # receiving the answer from the server
-    answer = servers_list[server_index].recv()
+    answer = servers_list[server_index].recv(1024)
 
     # sending it to the client
     client_sock.send(answer)
